@@ -1,0 +1,60 @@
+version: '3.8'
+services:
+    rocketchat:
+        image: rocketchat/rocket.chat:latest
+        restart: on-failure
+        volumes:
+            - /opt/chat/uploads:/app/uploads
+        environment:
+            - PORT=3000
+            - ROOT_URL=http://localhost:3000
+            - MONGO_URL=mongodb://mongo:27017/rocketchat?replicaSet=rs0
+            - MONGO_OPLOG_URL=mongodb://mongo:27017/local?replicaSet=rs0
+            - DEPLOY_METHOD=docker
+            - Accounts_UseDNSDomainCheck=True
+        depends_on:
+            - mongo
+        ports:
+            - 3000:3000
+        deploy:
+            replicas: 1
+            restart_policy:
+                condition: any
+                delay: 5s
+                max_attempts: 5
+        logging:
+            driver: "json-file"
+            options:
+                max-size: "50m"
+        networks:
+            - chat
+    mongo:
+        image: docker.io/bitnami/mongodb:5.0
+        restart: on-failure
+        volumes:
+            - /opt/chat/mongo-4.4/data/db:/bitnami/mongodb/data/db
+            - /opt/chat/mongo-4.4/data/dump:/bitnami/mongodb/data/dump
+        environment:
+            - MONGODB_REPLICA_SET_MODE=primary
+            - MONGODB_REPLICA_SET_NAME=rs0
+            - MONGODB_PORT_NUMBER=27017
+            - MONGODB_INITIAL_PRIMARY_HOST=mongo
+            - MONGODB_INITIAL_PRIMARY_PORT_NUMBER=27017
+            - MONGODB_ADVERTISED_HOSTNAME=mongo
+            - MONGODB_ENABLE_JOURNAL=true
+            - ALLOW_EMPTY_PASSWORD=yes
+        deploy:
+            replicas: 1
+            restart_policy:
+                condition: any
+                delay: 5s
+                max_attempts: 5
+        logging:
+            driver: "json-file"
+            options:
+                max-size: "50m"
+        networks:
+            - chat
+networks:
+    chat:
+        external: true
